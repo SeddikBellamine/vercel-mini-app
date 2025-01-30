@@ -1,8 +1,7 @@
 import { IExecDataProtector } from "@iexec/dataprotector";
-import { EthereumProvider } from "@walletconnect/ethereum-provider";
+import { Web3Modal, useWeb3Modal } from "@web3modal/react";
 import { useEffect, useState } from "react";
-
-const CHAIN_ID = 0x86; // Bellecour Chain ID
+import { useAccount, useConnect } from "wagmi";
 
 declare global {
   interface Window {
@@ -19,6 +18,9 @@ declare global {
 }
 
 const App = () => {
+  const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
+  const web3Modal = useWeb3Modal();
   const [protectedData, setProtectedData] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -28,51 +30,44 @@ const App = () => {
     }
   }, []);
 
+  // ✅ Detect Mobile Device
+  const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  // ✅ Connect Wallet & Handle Mobile Deep Linking
+  const connectWallet = async () => {
+    try {
+      setErrorMessage(null);
+      if (isConnected) return;
+
+      console.log("🔗 Connecting Wallet...");
+      console.log(address);
+
+      if (isMobile()) {
+        await web3Modal.open(); // ✅ Opens MetaMask via WalletConnect
+      } else {
+        await connect({ connector: connectors[0] });
+      }
+    } catch (error) {
+      console.error("❌ Wallet Connection Error:", error);
+      setErrorMessage((error as Error).message || "Unknown error occurred.");
+    }
+  };
+
+  // ✅ Protect Data Using iExec
   const protectData = async () => {
     try {
-      setErrorMessage(null); // Reset error message
-      console.log("🔍 Initializing WalletConnect...");
-
-      const wcProvider = await EthereumProvider.init({
-        projectId: "b2e4ce8c8c62a7815f1b264f625182dd",
-        chains: [CHAIN_ID],
-        rpcMap: { [CHAIN_ID]: "https://bellecour.iex.ec" },
-        showQrModal: false,
-        logger: "debug",
-      });
-
-      let walletConnectURI = "";
-      let uriGenerated = false;
-
-      wcProvider.on("display_uri", (uri) => {
-        walletConnectURI = uri;
-        uriGenerated = true;
-        console.log("🚀 WalletConnect URI Generated:", walletConnectURI);
-      });
-
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("❌ WalletConnect session timed out!")), 15000)
-      );
-
-      await Promise.race([wcProvider.connect({
-        chains: [CHAIN_ID],
-        rpcMap: { [CHAIN_ID]: "https://bellecour.iex.ec" }
-      }), timeout]);
-
-      if (uriGenerated) {
-        const metamaskURL = `wc:${encodeURIComponent(walletConnectURI)}`;
-        console.log("🔗 Opening MetaMask with WalletConnect:", metamaskURL);
-        window.location.href = metamaskURL;
-      } else {
-        throw new Error("❌ No WalletConnect URI generated.");
+      await connectWallet();
+      setErrorMessage(null);
+      if (!isConnected) {
+        throw new Error("Please connect your wallet first.");
       }
 
-      const iexecDataProtector = new IExecDataProtector(wcProvider);
+      console.log("🔄 Initiating iExec data protection...");
+      const iexecDataProtector = new IExecDataProtector(window.ethereum);
 
-      console.log("🔄 Initiating data protection...");
       const dataToProtect = {
-        email: "user@example.com", // Replace with actual data
-        telegramId: "12345678", // Example Telegram user ID
+        email: "user@example.com",
+        telegramId: "12345678",
       };
 
       const { transactionHash } = await iexecDataProtector.core.protectData({
@@ -82,7 +77,7 @@ const App = () => {
       console.log("✅ Data protected successfully:", transactionHash);
       setProtectedData(transactionHash);
     } catch (error) {
-      console.error("❌ Error during protectData process:", error);
+      console.error("❌ Data Protection Error:", error);
       setErrorMessage((error as Error).message || "Unknown error occurred.");
     }
   };
@@ -104,6 +99,8 @@ const App = () => {
           ❌ Error: {errorMessage}
         </p>
       )}
+
+      <Web3Modal projectId="b2e4ce8c8c62a7815f1b264f625182dd" />
     </div>
   );
 };

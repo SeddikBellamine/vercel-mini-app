@@ -11,11 +11,18 @@
   },
   "dependencies": {
     "@iexec/dataprotector": "^2.0.0-beta.11",
+    "@tanstack/react-query": "^5.65.1",
     "@telegram-web-app/react": "^0.0.1-beta.1",
+    "@wagmi/connectors": "^5.7.5",
+    "@wagmi/core": "^2.16.3",
     "@walletconnect/ethereum-provider": "^2.18.0",
+    "@web3modal/ethereum": "^2.7.1",
+    "@web3modal/react": "^2.7.1",
     "ethers": "^5.7.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "viem": "^2.22.17",
+    "wagmi": "^2.14.9"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
