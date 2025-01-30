@@ -54,7 +54,10 @@ const App = () => {
         setTimeout(() => reject(new Error("❌ WalletConnect session timed out!")), 15000)
       );
 
-      await Promise.race([wcProvider.connect(), timeout]);
+      await Promise.race([wcProvider.connect({
+        chains: [CHAIN_ID],
+        rpcMap: { [CHAIN_ID]: "https://bellecour.iex.ec" }
+      }), timeout]);
 
       if (uriGenerated) {
         const metamaskURL = `wc:${encodeURIComponent(walletConnectURI)}`;
